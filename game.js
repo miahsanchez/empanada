@@ -9,7 +9,6 @@ let doughState = DOUGH_STATES.empty;
 function fixBlurryCanvas(canvas, ctx) {
   const dpr = window.devicePixelRatio || 1;
 
-  // Save CSS width/height
   const w = canvas.clientWidth;
   const h = canvas.clientHeight;
 
@@ -104,7 +103,6 @@ gameLoop();
 function drawCounter() {
   ctx.fillStyle = '#c2a57c';
   ctx.fillRect(0, 250, canvas.width, 250);
-  //   ctx.fillRect(0, 300, canvas.width, 200);
 }
 
 function drawIngredients() {
@@ -155,30 +153,9 @@ function isIntersecting(ingredient) {
   return isI;
 }
 
-// ===== Click Detection =====
-// canvas.addEventListener('click', (e) => {
-//   console.log('IN THE CLICK LISTENER');
-//   const rect = canvas.getBoundingClientRect();
-//   const mouseX = e.clientX - rect.left;
-//   const mouseY = e.clientY - rect.top;
-
-//   ingredients.forEach((item) => {
-//     if (
-//       mouseX >= item.x &&
-//       mouseX <= item.x + item.width &&
-//       mouseY >= item.y &&
-//       mouseY <= item.y + item.height
-//     ) {
-//       item.onClick();
-//     }
-//   });
-// });
-
 let dragging = false;
 
 function isInsideCircle(mx, my, circle) {
-  // circle.x, circle.y = center of circle
-  // circle.width = radius (or you could have circle.radius)
   const dx = mx - circle.x;
   const dy = my - circle.y;
   const distance = Math.sqrt(dx * dx + dy * dy);
@@ -221,23 +198,11 @@ canvas.addEventListener('mousemove', (e) => {
   console.log('MOUSE MOVE');
   const rect = canvas.getBoundingClientRect();
   if (dragging && selectedIngredient) {
-    // console.log('Dragging at', e.offsetX, e.offsetY);
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
-    // console.log('SELECTED INGREDIENT', selectedIngredient);
-
     selectedIngredient.x = mouseX - selectedIngredient.width / 2;
     selectedIngredient.y = mouseY - selectedIngredient.height / 2;
-
-    // TODO: update intersecting logic
-    // if (isIntersecting()) {
-    //   pork.width = pork.height = 0;
-    //   dough.width = dough.height = 0;
-    //   dumpling.width = dumpling.height = 80;
-    //   dumpling.x = mouseX - selectedIngredient.width / 2;
-    //   dumpling.y = mouseY - selectedIngredient.height / 2;
-    // }
   }
 });
 
