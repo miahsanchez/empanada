@@ -1,10 +1,11 @@
-import { DOUGH_STATES } from './states.js';
+import { DOUGH_STATES, FRY_STATES } from './states.js';
 
 // ===== Canvas Setup =====
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 let doughState = DOUGH_STATES.empty;
+let fryState;
 
 function fixBlurryCanvas(canvas, ctx) {
   const dpr = window.devicePixelRatio || 1;
@@ -50,10 +51,9 @@ const dough = {
   name: 'dough',
   x: canvas.width / 2,
   y: 375,
-  width: 80,
-  height: 80,
+  radius: 80,
   color: '#d5b895',
-
+  halved: doughState === DOUGH_STATES.folded,
   shape: 'circle',
 };
 
@@ -67,6 +67,15 @@ const dumpling = {
 
   shape: 'circle',
 };
+
+const fryer = {
+  x: 600,
+  y: 275,
+  width: 100,
+  height: 200,
+  color: '#6f6f6f',
+};
+
 // fixBlurryCanvas(canvas, ctx);
 
 // ===== Game State =====
@@ -84,9 +93,9 @@ function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   drawCounter();
+  drawFryer();
   drawDough();
   drawIngredients();
-  drawFryer();
 
   drawSelectedInfo();
 }
@@ -102,6 +111,8 @@ gameLoop();
 // ===== Drawing Helpers =====
 function drawCounter() {
   ctx.fillStyle = '#c2a57c';
+  // TOP LEFT ORIGIN!!!
+
   ctx.fillRect(0, 250, canvas.width, 250);
 }
 
@@ -126,25 +137,44 @@ function drawSelectedInfo() {
   ctx.fillText(`${doughState}`, 20, 40);
 }
 
-function drawFryer() {
-  ctx.fillStyle = '#6f6f6f';
+function drawFryerBubbles() {
+  const rows = 10;
+  const cols = 5;
 
-  ctx.fillRect(600, 275, 100, 200);
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      // evenly space the bubbles inside the rectangle
+      const x = fryer.x + (j + 0.5) * (fryer.width / cols); // +0.5 to center in cell
+      const y = fryer.y + (i + 0.5) * (fryer.height / rows);
+
+      ctx.beginPath();
+      ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffee00';
+      ctx.fill();
+    }
+  }
+}
+
+function drawFryer() {
+  ctx.fillStyle = fryer.color;
+
+  ctx.fillRect(fryer.x, fryer.y, fryer.width, fryer.height);
+
+  if (fryState === FRY_STATES.frying) {
+    drawFryerBubbles();
+  }
 
   //   ctx.fillStyle = '#000';
   //   ctx.font = '14px sans-serif';
 }
 
 function drawDough() {
-  const item = dough;
+  const degrees = Math.PI * (dough.halved ? 1 : 2);
 
   ctx.beginPath();
-  if (doughState === DOUGH_STATES.empty || doughState === DOUGH_STATES.filled) {
-    ctx.arc(item.x, item.y, item.width, 0, Math.PI * 2); // full circle
-  } else if (doughState === DOUGH_STATES.folded) {
-    ctx.arc(item.x, item.y, item.width, 0, Math.PI, true); // full circle
-  }
-  ctx.fillStyle = item.color;
+  ctx.arc(dough.x, dough.y, dough.radius, 0, degrees, dough.halved);
+
+  ctx.fillStyle = dough.color;
   ctx.fill();
 }
 
@@ -160,7 +190,7 @@ function isInsideCircle(mx, my, circle) {
   const dy = my - circle.y;
   const distance = Math.sqrt(dx * dx + dy * dy);
 
-  return distance <= circle.width; // <= radius
+  return distance <= circle.radius; // <= radius
 }
 
 canvas.addEventListener('mousedown', (e) => {
@@ -190,6 +220,7 @@ canvas.addEventListener('mousedown', (e) => {
   ) {
     ingredients.pop();
     doughState = DOUGH_STATES.folded;
+    dough.halved = true;
     console.log('Dough clicked!');
   }
 });
@@ -197,16 +228,38 @@ canvas.addEventListener('mousedown', (e) => {
 canvas.addEventListener('mousemove', (e) => {
   console.log('MOUSE MOVE');
   const rect = canvas.getBoundingClientRect();
-  if (dragging && selectedIngredient) {
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+  if (dragging && selectedIngredient && doughState !== DOUGH_STATES.folded) {
     selectedIngredient.x = mouseX - selectedIngredient.width / 2;
     selectedIngredient.y = mouseY - selectedIngredient.height / 2;
   }
+  if (dragging && doughState === DOUGH_STATES.folded) {
+    dough.x = mouseX;
+    dough.y = mouseY;
+  }
 });
 
+function intersectingWithFryer(ingredient) {
+  console.log('DOUGH', ingredient.x, ingredient.y);
+
+  const top = fryer.y;
+  const bottom = fryer.y + fryer.height;
+
+  const left = fryer.x;
+  const right = fryer.x + fryer.width;
+  const a =
+    ingredient.x <= right &&
+    ingredient.x >= left &&
+    ingredient.y >= top &&
+    ingredient.y <= bottom;
+  console.log('MIAH A IS', a);
+
+  return a;
+}
+
 canvas.addEventListener('mouseup', (e) => {
+  console.log('IN ON MOUSE UP');
   if (dragging) {
     dragging = false;
     // console.log('Drag ended!');
@@ -217,6 +270,18 @@ canvas.addEventListener('mouseup', (e) => {
     ) {
       doughState = DOUGH_STATES.filled;
       selectedIngredient = null;
+    }
+
+    if (doughState === DOUGH_STATES.folded) {
+      if (intersectingWithFryer(dough)) {
+        dough.x = canvas.width / 2;
+        dough.y = 375;
+        dough.radius = 80;
+        dough.halved = false;
+
+        doughState = DOUGH_STATES.empty;
+        fryState = FRY_STATES.frying;
+      }
     }
   }
 });

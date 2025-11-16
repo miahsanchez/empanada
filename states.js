@@ -4,3 +4,8 @@ export const DOUGH_STATES = {
   folded: 'folded',
   pleated: 'pleated',
 };
+
+export const FRY_STATES = {
+  frying: 'frying',
+  fried: 'finished',
+};
